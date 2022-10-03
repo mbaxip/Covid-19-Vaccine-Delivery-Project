@@ -1,0 +1,466 @@
+---
+title: "Section2"
+output: html_document
+---
+
+Load Data & Remove Missing Values
+```{r eval=TRUE, echo=TRUE}
+
+MoMA_Data <- read.csv('~/Documents/DataIncubator2021/Artworks.csv', header = TRUE, sep = ",")
+MoMA_Data <- MoMA_Data[MoMA_Data$Title != "" & MoMA_Data$Artist != "" & MoMA_Data$DateAcquired != "", ]
+Photo_Dept_len <- length(which(MoMA_Data$Department == 'Photography'))
+Total_len <- nrow(MoMA_Data)
+Prop_Photography <- Photo_Dept_len/Total_len * 100
+```
+
+```{r eval=TRUE, echo=TRUE}
+Levels_Tiles = levels(MoMA_Data$Title)
+Untitled_Tiles = Levels_Tiles[grep('untitled',Levels_Tiles,ignore.case = TRUE)]
+len_Untitled_Tiles <- length(Untitled_Tiles)
+
+Levels_Medium = levels(MoMA_Data$Medium)
+Paper_Medium = Levels_Medium[grep('paper',Levels_Medium,ignore.case = TRUE)]
+len_Paper_Medium <- length(Paper_Medium)
+Canvas_Medium = Levels_Medium[grep('canvas',Levels_Medium,ignore.case = TRUE)]
+len_Canvas_Medium <- length(Canvas_Medium)
+Ratio_PaperToCanvas <- len_Paper_Medium/len_Canvas_Medium
+```
+
+Of the works with a non-null, positive value for Duration (column 'Duration (sec.)'), what proportion of these durations are listed as being longer than 10 hours?
+```{r eval=TRUE, echo=TRUE}
+Non_Null_Duration <- MoMA_Data$Duration..sec..[!is.na(MoMA_Data$Duration..sec..)]
+Duration_Longerthan10 <- Non_Null_Duration[Non_Null_Duration > c(10)]
+Prop_DurLongerthan10 <- length(Duration_Longerthan10)/length(Non_Null_Duration) * 100
+```
+
+For each year between 1960-1970 (inclusive), compute the number of unique artists whose work MoMA acquired that year. 
+```{r eval=TRUE, echo=TRUE}
+year <- seq(from = 1960, to = 1970, by =1)
+N = length(year)
+NArtists_Acquired_Year = rep('NA',N)
+for (i in 1:11){
+  Data_year_n <- MoMA_Data[grep(year[i], MoMA_Data$DateAcquired),]
+  NArtists_Acquired_Year[i] <- length(unique(Data_year_n$Artist))
+}
+
+```
+
+Perform a linear regression on these counts, where X is the year and y is the count of unique artists. Report the R^2 value for this fitted regression model.
+```{r eval=TRUE, echo=TRUE}
+rgrmod <- lm(as.numeric(NArtists_Acquired_Year) ~ year)
+summary(rgrmod)$r.squared
+```
+
+The Golden Ratio (phi ~= 1.618) is popularly regarded for its aesthetic qualities, but how typically is it observed in canvas shapes in MoMA's collection? For all works in the department of Drawings & Prints whose Width (column 'Width (cm)') and Height (column 'Height (cm)') are greater than zero, compute each piece's aspect ratio as Width / Height. 
+```{r eval=TRUE, echo=TRUE}
+Data_DrawPrintDept <- MoMA_Data[MoMA_Data$Department == 'Drawings & Prints',]
+Data_DrawPrintDept <- Data_DrawPrintDept[!is.na(Data_DrawPrintDept$Width..cm.) & !is.na(Data_DrawPrintDept$Height..cm.),]
+Data_DrawPrintDept <- Data_DrawPrintDept[Data_DrawPrintDept$Width..cm. > 0 & Data_DrawPrintDept$Height..cm. > 0,]
+AspectRatio <- Data_DrawPrintDept$Width..cm./Data_DrawPrintDept$Height..cm.
+```
+
+What proportion of these aspect ratios are within one percent of the Golden Ratio or the inverse of the Golden Ratio (which would denote a vertical Golden Rectangle)?
+```{r eval=TRUE, echo=TRUE}
+Golden_Ratio <- c(1.618)
+one_perc <- 1/100 * Golden_Ratio
+inverse_goldenRatio <- 1/Golden_Ratio
+one_perc_inverse <- 1/100 * inverse_goldenRatio
+
+NGR_AspectRatio <- length(AspectRatio[AspectRatio < Golden_Ratio + one_perc & AspectRatio > Golden_Ratio - one_perc])
+NIGR_AspectRatio <- length(AspectRatio[AspectRatio < inverse_goldenRatio + one_perc_inverse & AspectRatio > inverse_goldenRatio - one_perc_inverse])
+Prop_GR_IGR_AspectRatio <- (NGR_AspectRatio + NIGR_AspectRatio)/length(AspectRatio) * 100
+```
+
+Does the number of MoMA's yearly acquisitions vary along with changes to the market? Compute the number of pieces acquired by MoMA for each year from 2000-2010 (inclusive), then compute the percent difference in yearly acquisitions. 
+```{r eval=TRUE, echo=TRUE}
+year <- seq(from = 2000, to = 2010, by = 1)
+NPieces_yearly <- rep("NA",11)
+for (i in 1:11){
+  NPieces_yearly[i] <- length(MoMA_Data$DateAcquired[grep(year[i],MoMA_Data$DateAcquired)])
+}
+NPieces_yearly <- as.numeric(NPieces_yearly)
+PercYearlyDiff <-(NPieces_yearly[2:11] - NPieces_yearly[1:10]) / NPieces_yearly[1:10] * 100
+
+```
+
+Next, using values from the link provided, obtain January's average closing price for the S&P 500 across those same years (2000-2010). Compute the year-to-year percent difference of those values, as well. Finally, compute and report the Pearson's correlation coefficient between the percent differences in yearly acquisitions and in the average January S&P 500 closing prices.
+You can find the monthly average closing price for the S&P 500 at the following link: here. Note: Since your starting point is 2000, your percent differences will be defined for 2001-2010.
+```{r eval=TRUE, echo=TRUE}
+Jan_ClosingPrice <- c(1123.58, 865.58, 1378.76, 1424.16, 1278.73, 1181.41, 1132.52, 895.84, 1140.21, 1335.63, 1425.59)
+PercYearlyDiffPrice <- (Jan_ClosingPrice[2:11] - Jan_ClosingPrice[1:10])/ Jan_ClosingPrice[1:10] * 100
+
+cor.test(PercYearlyDiff, PercYearlyDiffPrice, method = 'pearson')
+```
+
+** Section 3 **
+
+You have a large bag of American coins: pennies, nickels, dimes, quarters, and half dollars. For all questions asked, express your answers in terms of US dollars, and give solutions to 5 places after the decimal point. For example, an answer of 11.56 cents would be given as 0.11560 in your submission. Don't use the $ symbol in your submission. Note, the order of the questions are from left to right. In other words, the first question is the top most question on the left column while the second question is the top most question on the right column.
+
+Suppose you draw 10 coins at random from the bag (assume each of the five coin types will come up with equal probability for each draw). What is the probability that you will be able to buy an item for $1.00?
+
+```{r eval=TRUE, echo=TRUE}
+library(gtools)
+
+# Combination with repitition
+nTotalComb <- factorial(5+10-1)/(factorial(10) * factorial(4))
+comb <- combinations(n = 5,r = 10,v = c(0.01, 0.05, 0.1, 0.25, 0.5),repeats.allowed = TRUE)
+combsum <- apply(comb, 1, sum)
+nCombSumGreaterthan1 <- length(which(combsum >=1 ))
+Prob <- nCombSumGreaterthan1/nTotalComb
+Prob
+```
+
+Suppose you draw 10 coins at random from the bag (assume each of the five coin types will come up with equal probability for each draw). What is the probability that you will be able to buy an item for $2.00?
+```{r eval=TRUE, echo=TRUE}
+nCombSumGreaterthan1 <- length(which(combsum >=2 ))
+Prob <- nCombSumGreaterthan1/nTotalComb
+Prob
+```
+
+Now suppose that to pay for an item, you draw single coins one at a time from the bag (again, assume each of the five coin types will come up with equal probablility for each draw) until you have enough for the item and then give those coins to the cashier. What is the expected amount of the change you get back from the cashier when the item costs $0.25?
+```{r eval=TRUE, echo=TRUE}
+niter <- 25000
+MoneyToCashier <- rep('NA',niter)
+for (j in 1:niter){
+  sample <- c(0)
+  while (sample < 0.25) {
+    rsample <- runif(1)
+    
+    if (rsample <= 0.2){
+        sample <- sample + 0.01 #penny
+    }
+    else if (rsample > 0.2 & rsample <= 0.4 ){
+        sample <- sample + 0.05 #nickel
+    }
+    else if (rsample > 0.4 & rsample <= 0.6 ){
+        sample <- sample + 0.1 #dime
+    }
+    else if (rsample > 0.6 & rsample <= 0.8 ){
+        sample <- sample + 0.25 #quarter
+    }
+    else if (rsample > 0.8 & rsample <= 1 ){
+        sample <- sample + 0.5 #half dollar
+    }
+  }
+  MoneyToCashier[j] <- sample 
+}
+MoneyToCashier <- as.numeric(MoneyToCashier)
+ChangeFromCashier <- MoneyToCashier - c(0.25)
+ExpectedChangeFromCashier <- mean(ChangeFromCashier)
+ExpectedChangeFromCashier
+```
+
+What is the standard deviation of the change you get back from the cashier when the item costs $0.25?
+```{r eval=TRUE, echo=TRUE}
+SD_ChangeFromCashier <- sd(ChangeFromCashier)
+SD_ChangeFromCashier
+```
+
+What is the expected amount of the change you get back from the cashier when the item costs $1.00?
+```{r eval=TRUE, echo=TRUE}
+niter <- 25000
+MoneyToCashier <- rep('NA',niter)
+for (j in 1:niter){
+  sample <- c(0)
+  while (sample < 1) {
+    rsample <- runif(1)
+    if (rsample <= 0.2){
+        sample <- sample + 0.01 #penny
+    }
+    else if (rsample > 0.2 & rsample <= 0.4 ){
+        sample <- sample + 0.05 #nickel
+    }
+    else if (rsample > 0.4 & rsample <= 0.6 ){
+        sample <- sample + 0.1 #dime
+    }
+    else if (rsample > 0.6 & rsample <= 0.8 ){
+        sample <- sample + 0.25 #quarter
+    }
+    else if (rsample > 0.8 & rsample <= 1 ){
+        sample <- sample + 0.5 #half dollar
+    }
+  }
+  MoneyToCashier[j] <- sample 
+}
+MoneyToCashier <- as.numeric(MoneyToCashier)
+ChangeFromCashier <- MoneyToCashier - c(1)
+ExpectedChangeFromCashier <- mean(ChangeFromCashier)
+ExpectedChangeFromCashier
+```
+
+What is the standard deviation of the change you get back from the cashier when the item costs $1.00?
+```{r eval=TRUE, echo=TRUE}
+SD_ChangeFromCashier <- sd(ChangeFromCashier)
+SD_ChangeFromCashier
+```
+
+What is the expected amount of the change you get back from the cashier when the item costs $10.00?
+```{r eval=TRUE, echo=TRUE}
+niter <- 25000
+MoneyToCashier <- rep('NA',niter)
+for (j in 1:niter){
+  sample <- c(0)
+  while (sample < 10) {
+    rsample <- runif(1)
+    if (rsample <= 0.2){
+        sample <- sample + 0.01 #penny
+    }
+    else if (rsample > 0.2 & rsample <= 0.4 ){
+        sample <- sample + 0.05 #nickel
+    }
+    else if (rsample > 0.4 & rsample <= 0.6 ){
+        sample <- sample + 0.1 #dime
+    }
+    else if (rsample > 0.6 & rsample <= 0.8 ){
+        sample <- sample + 0.25 #quarter
+    }
+    else if (rsample > 0.8 & rsample <= 1 ){
+        sample <- sample + 0.5 #half dollar
+    }
+  }
+  MoneyToCashier[j] <- sample 
+}
+MoneyToCashier <- as.numeric(MoneyToCashier)
+ChangeFromCashier <- MoneyToCashier - c(10)
+ExpectedChangeFromCashier <- mean(ChangeFromCashier)
+ExpectedChangeFromCashier
+```
+
+What is the standard deviation of the change you get back from the cashier when the item costs $10.00?
+```{r eval=TRUE, echo=TRUE}
+SD_ChangeFromCashier <- sd(ChangeFromCashier)
+SD_ChangeFromCashier
+```
+
+** Section 1 **
+
+```{r eval=TRUE, echo=TRUE}
+library(ggplot2)
+library(dplyr)
+library(plotly) 
+library(RColorBrewer)
+
+CovidVacc_Data <- read.csv('~/Documents/DataIncubator2021/covid19-vaccination-subnational-main/data/vaccinations.csv', header = TRUE, sep = ",")
+
+CovidVacc_Data$date <- strptime(CovidVacc_Data$date,format="%m/%d/%y")
+CovidVacc_Data$date <- as.Date(CovidVacc_Data$date)
+
+CovidVacc_Data <- cbind(CovidVacc_Data,'log_TotalVacc_per_100' = log10(CovidVacc_Data$total_vaccinations_per_100))
+
+CovidVacc_Data <- CovidVacc_Data[CovidVacc_Data$region != "-",]
+
+fig <- plot_ly(data=CovidVacc_Data, x = ~date, y = ~log_TotalVacc_per_100, name = ~region, 
+               type = 'scatter', mode = 'lines', color = ~region,
+               line = list (width = 2)) %>%
+               highlight(on = "plotly_hover") %>% 
+  layout(xaxis = list(title = "Date"), yaxis = list(title = "log(Total number of Vaccination per 100 habitants)"), title = "Total number of vaccinations per 100 habitants administered in a region over time")
+  
+groupedByCountryDate <- CovidVacc_Data %>%
+  group_by(location,date) %>%
+  summarise(PeopleFullVacc=sum(people_fully_vaccinated_per_100)) %>% 
+  group_by(location) %>% 
+  filter(date == max(date))
+
+cleanedGroupedByCountry <- groupedByCountryDate[!is.na(groupedByCountryDate$PeopleFullVacc),]
+
+fig_bar <- plot_ly(data = cleanedGroupedByCountry, x = ~PeopleFullVacc, y = ~reorder(location, PeopleFullVacc), name = ~location, color = ~location, type = 'bar', orientation = 'h') %>% 
+  layout(xaxis = list(title = "People fully vaccinated per 100"), yaxis = list(title = "Country"), title = "People fully vaccinated per 100 by country for latest date")
+
+```
+
+```{r eval=TRUE, echo=TRUE}
+library(dplyr)
+library(maditr)
+CovidVacc_Data <- read.csv('~/Documents/DataIncubator2021/covid19-vaccination-subnational-main/data/vaccinations.csv', header = TRUE, sep = ",")
+
+CovidVacc_Data$date <- strptime(CovidVacc_Data$date,format="%m/%d/%y")
+CovidVacc_Data$date <- as.Date(CovidVacc_Data$date)
+
+USA_Data <- CovidVacc_Data[CovidVacc_Data$location == 'United States',]
+USA_Data <- na.omit(USA_Data)
+USA_Data <- USA_Data[,-c(4,5)]
+USA_Data <- USA_Data[,-c(1)]
+USA_Data_TotVacc <- dcast(USA_Data, region ~ date,value.var='total_vaccinations')
+#a <- apply(USA_Data_TotVacc, 2, function(x) !any(is.na(x)))
+#USA_Data_TotVacc <- USA_Data_TotVacc[,..a]
+
+USA_Data_TotVacc <- na.omit(USA_Data_TotVacc)
+
+melted_df<-melt(USA_Data_TotVacc,id.vars = "region", value.name = "TotVacc",measure.vars = colnames(USA_Data_TotVacc[,c(2:29)]), variable.name = 'date')
+
+plot_ly(data=melted_df, x = ~date, y = ~log10(TotVacc), name = ~region, 
+               type = 'scatter', mode = 'lines', color = ~region,
+               line = list (width = 2)) %>%
+               highlight(on = "plotly_hover") %>% 
+  layout(xaxis = list(title = "Date"), yaxis = list(title = "log(Total number of Vaccination)"), title = "USA: Total number of vaccinations administered in a region over time")
+
+melted_df <- cbind(melted_df,'num_date' = as.Date(melted_df$date, origin = "2021-01-12"))
+fit=lm(TotVacc~num_date*region,data=melted_df)
+summary(fit)
+
+newdat = expand.grid(num_date=seq(as.Date("2021-01-12"), by = "day", length.out = 60),
+                     region = unique(melted_df$region))
+#newdat$date <- as.numeric(newdat$date)
+
+newdat$predlm = predict(fit, newdata = newdat)
+
+ggplot(melted_df, aes(x = num_date, y = TotVacc, color = region) ) +
+     geom_point(aes(x = num_date, y = TotVacc, color = region) ) +
+     geom_line(data = newdat, aes(y = predlm), size = 1)
+
+RegionPopulation_Data <- read.csv('~/Documents/DataIncubator2021/covid19-vaccination-subnational-main/data/population.csv', header = TRUE, sep = ",")
+
+RegionPopulation_Data <- RegionPopulation_Data[grep('^US',RegionPopulation_Data$region_iso),]
+RegionPopulation_Data$date <- as.Date(RegionPopulation_Data$date)
+RegionPopulation_Data <- RegionPopulation_Data %>% filter(date == "2021-02-12")
+
+a<- unique(CovidVacc_Data[CovidVacc_Data$location_iso == "US","region"])
+b <- unique(CovidVacc_Data[CovidVacc_Data$location_iso == "US","region_iso"])
+Regions_USA <- as.data.frame(a)
+Regions_USA <- cbind(Regions_USA,b)
+colnames(Regions_USA) <- c('region','region_iso')
+Regions_USA <- Regions_USA[match(unique(melted_df$region),Regions_USA$region),]
+RegionPopulation_Data <- RegionPopulation_Data[match(Regions_USA$region_iso,RegionPopulation_Data$region_iso),]
+
+
+### Population Fully Vaccinated
+
+USA_Data_PopFullyVacc <- dcast(USA_Data, region ~ date,value.var='people_fully_vaccinated')
+#a <- apply(USA_Data_TotVacc, 2, function(x) !any(is.na(x)))
+#USA_Data_TotVacc <- USA_Data_TotVacc[,..a]
+
+#USA_Data_PopFullyVacc <- na.omit(USA_Data_PopFullyVacc)
+
+melted_df_Pop<-melt(USA_Data_PopFullyVacc,id.vars = "region", value.name = "PopFullyVacc",measure.vars = colnames(USA_Data_PopFullyVacc[,c(2:29)]), variable.name = 'date')
+melted_df_Pop<- na.omit(melted_df_Pop)
+
+melted_df_Pop <- cbind(melted_df_Pop,'num_date' = as.Date(melted_df_Pop$date, origin = "2021-01-12"))
+fit=lm(PopFullyVacc~num_date*region,data=melted_df_Pop)
+summary(fit)
+
+newdat = expand.grid(num_date=seq(as.Date("2021-01-12"), by = "week", length.out = 40),
+                     region = unique(melted_df_Pop$region))
+#newdat$date <- as.numeric(newdat$date)
+
+newdat$predlm = predict(fit, newdata = newdat)
+newdat$predlm[newdat$predlm < 0] = 0
+
+newdat <- cbind(newdat,'population' = rep(RegionPopulation_Data$population,each = 40))
+
+ggplot(melted_df_Pop, aes(x = num_date, y = PopFullyVacc, color = region) ) +
+     geom_point(aes(x = num_date, y = PopFullyVacc, color = region) ) +
+     geom_line(data = newdat, aes(y = predlm), size = 1)
+
+newdat <- cbind(newdat, 'percPopFullyVacc' = newdat$predlm/newdat$population * 100)
+
+plot_ly(data=newdat, x = ~num_date, y = ~percPopFullyVacc, name = ~region, 
+               type = 'scatter', mode = 'lines', color = ~region,
+               line = list (width = 2)) %>%
+               highlight(on = "plotly_hover") %>% 
+  layout(xaxis = list(title = "Date"), yaxis = list(title = "Percentage of Population Fully Vaccinated"), title = "USA Prediction: Percentage of Population Fully Vaccinated in a region over time")
+
+
+```
+
+
+```{r eval=TRUE, echo=TRUE}
+library(maditr)
+library(tidyverse)
+library(ggplot2)
+library(dplyr)
+library(plotly) 
+library(RColorBrewer)
+
+CovidVacc_Data <- read.csv('~/Documents/DataIncubator2021/covid19-vaccination-subnational-main/data/vaccinations.csv', header = TRUE, sep = ",")
+
+CovidVacc_Data$date <- strptime(CovidVacc_Data$date,format="%m/%d/%y")
+CovidVacc_Data$date <- as.Date(CovidVacc_Data$date)
+CovidVacc_Data <- CovidVacc_Data[CovidVacc_Data$region != "-",]
+
+All_Data_PopFullyVacc <- CovidVacc_Data[,c(1,2,3,5,8)]
+All_Data_PopFullyVacc <- All_Data_PopFullyVacc[All_Data_PopFullyVacc$region != '-',]
+All_Data_PopFullyVacc <- na.omit(All_Data_PopFullyVacc)
+All_Data_PopFullyVacc <- All_Data_PopFullyVacc[!duplicated(All_Data_PopFullyVacc),]
+All_Data_PopFullyVacc <- dcast(All_Data_PopFullyVacc, location+region+region_iso ~ date,value.var='people_fully_vaccinated')
+
+All_Data_PopFullyVacc <- All_Data_PopFullyVacc[,c(1,2,3,33:64)]
+All_Data_PopFullyVacc <- All_Data_PopFullyVacc[,-c(8,9,10)]
+All_Data_PopFullyVacc <- All_Data_PopFullyVacc[,-c(32)]
+All_Data_PopFullyVacc <- All_Data_PopFullyVacc[All_Data_PopFullyVacc$location != 'Sweden',]
+
+melted_df_AllPop<-melt(All_Data_PopFullyVacc,id.vars = c("location","region","region_iso"), value.name = "PopFullyVacc",measure.vars = colnames(All_Data_PopFullyVacc[,c(4:31)]), variable.name = 'date')
+melted_df_AllPop<- na.omit(melted_df_AllPop)
+
+melted_df_AllPop <- cbind(melted_df_AllPop,'num_date' = as.Date(melted_df_AllPop$date, origin = "2021-01-12"))
+melted_df_AllPop <- melted_df_AllPop[melted_df_AllPop$PopFullyVacc != 0,]
+fit=lm(PopFullyVacc~num_date*region,data=melted_df_AllPop)
+summary(fit)
+
+RegionPopulation_Data <- read.csv('~/Documents/DataIncubator2021/covid19-vaccination-subnational-main/data/population.csv', header = TRUE, sep = ",")
+
+RegionPopulation_Data$date <- as.Date(RegionPopulation_Data$date)
+RegionPopulation_Data <- RegionPopulation_Data %>% filter(date == "2021-02-12")
+
+ 
+a <- unique(melted_df_AllPop$region_iso)
+
+b <- melted_df_AllPop[match(a,melted_df_AllPop$region_iso),'region']
+
+c <- melted_df_AllPop[match(a,melted_df_AllPop$region_iso),'location']
+
+Regions_All <- as.data.frame(a)
+Regions_All <- cbind(Regions_All,b$region)
+Regions_All <- cbind(Regions_All,c$location)
+colnames(Regions_All) <- c('region_iso', 'region','location')
+Regions_All <- Regions_All[Regions_All$region_iso != '-',]
+
+RegionPopulation_Data <- RegionPopulation_Data[match(Regions_All$region_iso,RegionPopulation_Data$region_iso),]
+
+newdat = expand.grid(num_date=seq(as.Date("2021-01-12"), by = "week", length.out = 40),
+                     region_iso = Regions_All$region_iso)
+
+newdat <- cbind(newdat,'region' = Regions_All[match(newdat$region_iso,Regions_All$region_iso),'region'])
+newdat <- cbind(newdat,'location' = Regions_All[match(newdat$region_iso,Regions_All$region_iso),'location'])
+#newdat$date <- as.numeric(newdat$date)
+
+newdat$predlm = predict(fit, newdata = newdat)
+newdat$predlm[newdat$predlm < 0] = 0
+
+newdat <- cbind(newdat,'population' = rep(RegionPopulation_Data$population,each = 40))
+
+newdat <- cbind(newdat, 'percPopFullyVacc' = newdat$predlm/newdat$population * 100)
+
+newdat$percPopFullyVacc[newdat$percPopFullyVacc > 100] = 100
+
+ggplot(melted_df_AllPop, aes(x = num_date, y = PopFullyVacc, color = region) ) +
+     geom_point(aes(x = num_date, y = PopFullyVacc, color = region) ) +
+     geom_line(data = newdat, aes(y = predlm), size = 1)
+
+plot_ly(data=newdat, x = ~num_date, y = ~percPopFullyVacc, name = ~region, 
+               type = 'scatter', mode = 'lines', color = ~region,
+               line = list (width = 2)) %>%
+               highlight(on = "plotly_hover") %>% 
+  layout(xaxis = list(title = "Date"), yaxis = list(title = "Percentage of Population Fully Vaccinated"), title = "Global Prediction: Percentage of Population Fully Vaccinated in a region over time")
+
+
+### Country predictions
+PredictgroupedByCountry <- newdat %>%
+  group_by(location,num_date) %>%
+  summarise_at(c("predlm", "population"), sum, na.rm = TRUE) 
+
+PredictgroupedByCountry <- cbind(PredictgroupedByCountry, 'percPopFullyVacc' = PredictgroupedByCountry$predlm/PredictgroupedByCountry$population * 100)
+
+plot_ly(data=PredictgroupedByCountry, x = ~num_date, y = ~percPopFullyVacc, name = ~location, 
+               type = 'scatter', mode = 'lines', color = ~location,
+               line = list (width = 2)) %>%
+               highlight(on = "plotly_hover") %>% 
+  layout(xaxis = list(title = "Date"), yaxis = list(title = "Percentage of Population Fully Vaccinated"), title = "Country Prediction: Percentage of Population Fully Vaccinated in a country over time")
+
+
+```
+
+
+
+```{r eval=TRUE, echo=TRUE}
+
+```
